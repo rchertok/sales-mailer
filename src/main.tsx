@@ -51,7 +51,7 @@ function Layout() {
 
 const router = createBrowserRouter([
   {
-    element: <Layout />, // <-- wraps all routes with Nav + <Outlet/>
+    element: <Layout />,
     children: [
       { path: "/", element: <Home /> },
       { path: "/models", element: <Models /> },

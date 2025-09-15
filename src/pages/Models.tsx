@@ -50,15 +50,17 @@ function loadModels(): Model[] {
   }
 }
 
+//Saves the model in the list of models.
 function saveModels(models: Model[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(models));
 }
 
+//Formats the currency into dollars.
 function formatCurrency(n?: number) {
   if (typeof n !== "number" || Number.isNaN(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
-
+//Formats pricing inputs
 function formatPricing(p: Pricing) {
   if (p.kind === "purchase") {
     return p.price ? `Purchase: ${formatCurrency(p.price)}` : "Purchase: —";

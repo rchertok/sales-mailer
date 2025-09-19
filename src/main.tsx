@@ -7,6 +7,9 @@ import {
   Outlet,
 } from "react-router-dom";
 
+// Add Bootstrap CSS import
+import "bootstrap/dist/css/bootstrap.min.css";
+
 import Home from "./pages/Home";
 import Models from "./pages/Models";
 import Templates from "./pages/Templates";
@@ -16,25 +19,57 @@ import Settings from "./pages/Settings";
 
 function Nav() {
   return (
-    <nav
-      style={{ padding: 12, borderBottom: "1px solid #ddd", marginBottom: 12 }}
-    >
-      <Link to="/" style={{ marginRight: 12 }}>
-        Home
-      </Link>
-      <Link to="/models" style={{ marginRight: 12 }}>
-        Models
-      </Link>
-      <Link to="/templates" style={{ marginRight: 12 }}>
-        Templates
-      </Link>
-      <Link to="/compose" style={{ marginRight: 12 }}>
-        Compose
-      </Link>
-      <Link to="/history" style={{ marginRight: 12 }}>
-        History
-      </Link>
-      <Link to="/settings">Settings</Link>
+    <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
+      <div className="container-fluid">
+        <Link className="navbar-brand" to="/">
+          Sales Mailer
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon" />
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <Link className="nav-link" to="/">
+                Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/models">
+                Models
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/templates">
+                Templates
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/compose">
+                Compose
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/history">
+                History
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/settings">
+                Settings
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </div>
     </nav>
   );
 }

@@ -10,10 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "babel-generator": "^6.26.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "bootstrap": "^5.3.8",
-    "handlebars": "^4.7.8",
-    "mjml": "^4.15.3",
+    "lucide-react": "^0.577.0",
     "mjml-browser": "^4.15.3",
     "react": "^19.1.1",
     "react-bootstrap": "^2.10.10",
@@ -21,17 +22,10 @@
     "react-router-dom": "^7.9.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.28.3",
-    "@babel/preset-env": "^7.28.3",
     "@eslint/js": "^9.33.0",
-    "@types/babel__generator": "^7.27.0",
-    "@types/babel__traverse": "^7.28.0",
-    "@types/babel-generator": "^6.25.8",
     "@types/estree": "^1.0.8",
     "@types/json-schema": "^7.0.15",
-    "@types/mjml": "^4.7.4",
     "@types/mjml-browser": "^4.15.0",
-    "@types/mjml-core": "^4.15.2",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",

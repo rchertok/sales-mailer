@@ -1,11 +1,15 @@
 // src/pages/Compose.tsx
 import { useEffect, useMemo, useState } from "react";
+import { Send } from "lucide-react";
+import { Link } from "react-router-dom";
 import { saveHistory } from "../lib/history";
 import mjml2html from "mjml-browser";
 import {
   type SimpleTemplate,
   buildMJMLFromSimpleTemplate,
+  FONT_OPTIONS,
 } from "../lib/simpleTemplate";
+import type { Model } from "../types";
 import { buildMimeEmail, toBase64Url } from "../lib/mime";
 import { getGoogleAccessToken } from "./Settings";
 
@@ -14,21 +18,6 @@ const SIMPLE_TEMPLATES_KEY = "simple_templates";
 const GMAIL_SEND =
   "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
-// ----- Types for models (match your Models page) -----
-type Pricing =
-  | { kind: "purchase"; price?: number }
-  | { kind: "lease"; monthly: number; termMonths: number; upfront?: number };
-
-type Model = {
-  id: string;
-  name: string;
-  skuInternal?: string;
-  hideSku?: boolean;
-  pricing: Pricing;
-  notesInternal?: string;
-};
-
-// ----- Local loaders -----
 function loadModels(): Model[] {
   try {
     const raw = localStorage.getItem(MODELS_KEY);
@@ -48,11 +37,9 @@ function loadSimpleTemplates(): SimpleTemplate[] {
 }
 
 export default function Compose() {
-  // Data
   const [models, setModels] = useState<Model[]>([]);
   const [templates, setTemplates] = useState<SimpleTemplate[]>([]);
 
-  // Selections / inputs
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
   const [templateId, setTemplateId] = useState<string>("");
   const [recipientFirstName, setRecipientFirstName] = useState("");
@@ -60,7 +47,10 @@ export default function Compose() {
   const [subject, setSubject] = useState("Your options");
   const [toEmail, setToEmail] = useState("");
 
-  // Derived
+  const [fontFamily, setFontFamily] = useState("Inter");
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
   const selectedTemplate = useMemo(
     () => templates.find((t) => t.id === templateId) || null,
     [templates, templateId]
@@ -71,196 +61,207 @@ export default function Compose() {
     return selectedModelIds.map((id) => map.get(id)).filter(Boolean) as Model[];
   }, [models, selectedModelIds]);
 
-  // Load data once
   useEffect(() => {
     setModels(loadModels());
     setTemplates(loadSimpleTemplates());
   }, []);
 
-  // Build final HTML (SimpleTemplate -> MJML -> HTML)
   const html = useMemo(() => {
-    if (!selectedTemplate) return "<p>Select a template.</p>";
+    if (!selectedTemplate) return "<p style='font-family:sans-serif;color:#999;padding:2rem'>Select a template to see a preview.</p>";
     const mjml = buildMJMLFromSimpleTemplate(selectedTemplate, {
       recipient: { firstName: recipientFirstName || "there" },
       rep: { name: repName || "Your Sales Rep" },
       models: selectedModels,
+      fontFamily,
     });
     const out = mjml2html(mjml, { minify: true });
     if (out.errors?.length) {
-      return `<pre style="color:red">${out.errors
-        .map((e) => e.formattedMessage)
-        .join("\n")}</pre>`;
+      return `<pre style="color:red">${out.errors.map((e) => e.formattedMessage).join("\n")}</pre>`;
     }
     return out.html;
-  }, [selectedTemplate, recipientFirstName, repName, selectedModels]);
+  }, [selectedTemplate, recipientFirstName, repName, selectedModels, fontFamily]);
 
-  // Toggle model checkbox
   function toggleModel(id: string) {
     setSelectedModelIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
 
-  // Copy as rich HTML (so Gmail pastes styled)
-  function copyHtml() {
-    const type = "text/html";
-    const blob = new Blob([html], { type });
-    const data = [new ClipboardItem({ [type]: blob })];
-    navigator.clipboard.write(data).then(
-      () => alert("Rich HTML copied! Paste it into Gmail."),
-      (err) => alert("Failed to copy: " + err)
-    );
-  }
-  type SendRecord = {
-    id: string;
-    at: string;
-    to: string;
-    subject: string;
-    templateTitle: string;
-    modelNames: string[];
-  };
-  const HISTORY_KEY = "send_history";
-
-  function saveHistory(rec: SendRecord) {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    const arr = raw ? (JSON.parse(raw) as SendRecord[]) : [];
-    localStorage.setItem(HISTORY_KEY, JSON.stringify([rec, ...arr]));
+  async function copyHtml() {
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": blob })]);
+      setStatus({ type: "success", msg: "Copied! Paste it directly into Gmail." });
+    } catch (err) {
+      setStatus({ type: "error", msg: "Failed to copy: " + err });
+    }
   }
 
-  // Send via Gmail API
   async function sendEmail() {
     const token = getGoogleAccessToken();
     if (!token) {
-      alert("Please sign in with Google on the Settings page first.");
+      setStatus({ type: "error", msg: "Please sign in with Google on the Settings page first." });
       return;
     }
-    if (!templateId) return alert("Choose a template.");
-    if (!toEmail.trim()) return alert("Enter a recipient email.");
-    if (!html) return alert("No HTML generated yet.");
+    if (!templateId) { setStatus({ type: "error", msg: "Please choose a template." }); return; }
+    if (!toEmail.trim()) { setStatus({ type: "error", msg: "Please enter a customer email address." }); return; }
 
-    const mime = buildMimeEmail({
-      from: "", // Gmail sets From: me
-      to: toEmail.trim(),
-      subject: subject.trim() || "Your options",
-      html,
-    });
-    const raw = toBase64Url(mime);
+    setSending(true);
+    setStatus(null);
 
-    const res = await fetch(GMAIL_SEND, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ raw }),
-    });
+    try {
+      const mime = buildMimeEmail({
+        from: "",
+        to: toEmail.trim(),
+        subject: subject.trim() || "Your options",
+        html,
+      });
+      const raw = toBase64Url(mime);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      alert("Send failed: " + errText);
-      return;
+      const res = await fetch(GMAIL_SEND, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ raw }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        setStatus({ type: "error", msg: "Send failed: " + errText });
+        return;
+      }
+
+      saveHistory({
+        id: crypto.randomUUID(),
+        at: new Date().toISOString(),
+        to: toEmail.trim(),
+        subject: subject.trim(),
+        templateTitle: selectedTemplate?.title || "(untitled)",
+        modelNames: selectedModels.map((m) => m.name),
+      });
+
+      setStatus({ type: "success", msg: `Email sent to ${toEmail.trim()}. Check your Sent folder.` });
+    } catch (err) {
+      setStatus({ type: "error", msg: "Unexpected error: " + err });
+    } finally {
+      setSending(false);
     }
-    saveHistory({
-      id: crypto.randomUUID(),
-      at: new Date().toISOString(),
-      to: toEmail.trim(),
-      subject: subject.trim(),
-      templateTitle: selectedTemplate?.title || "(untitled)",
-      modelNames: selectedModels.map((m) => m.name),
-    });
-
-    alert("Sent! Check your Sent folder.");
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 16 }}>
+    <div className="row g-4 page-enter">
       {/* LEFT: controls */}
-      <div>
-        <h2>Compose</h2>
+      <div className="col-md-4">
+        <h2>Compose Email</h2>
 
-        <label>
-          Template
-          <br />
+        <div className="mb-3">
+          <div className="d-flex align-items-center justify-content-between mb-1">
+            <label htmlFor="templateSelect" className="mb-0">Email Template</label>
+            {templates.length === 0 && (
+              <Link to="/templates" className="small text-decoration-none" style={{ color: "var(--brand-primary)" }}>
+                + Add template
+              </Link>
+            )}
+          </div>
+          {templates.length === 0 ? (
+            <div className="border rounded p-3 text-muted small"
+              style={{ background: "#fafafa", borderStyle: "dashed !important" }}>
+              No templates yet.{" "}
+              <Link to="/templates" className="text-decoration-none fw-semibold">
+                Create one on the Templates page
+              </Link>{" "}
+              to get started.
+            </div>
+          ) : (
+            <select
+              id="templateSelect"
+              className="form-select"
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+            >
+              <option value="">— Choose a template —</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="mb-3">
+          <label htmlFor="fontSelect">Email Font</label>
           <select
-            value={templateId}
-            onChange={(e) => setTemplateId(e.target.value)}
-            style={{ width: "100%", padding: 8, marginBottom: 12 }}
+            id="fontSelect"
+            className="form-select"
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
           >
-            <option value="">-- Choose template --</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
+            {FONT_OPTIONS.map((f) => (
+              <option key={f.value} value={f.value}>{f.label}</option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          To
-          <br />
+        <div className="mb-3">
+          <label htmlFor="toEmail">Customer Email</label>
           <input
+            id="toEmail"
+            type="email"
+            className="form-control"
             value={toEmail}
             onChange={(e) => setToEmail(e.target.value)}
             placeholder="customer@example.com"
-            style={{ width: "100%", padding: 8, marginBottom: 12 }}
           />
-        </label>
+        </div>
 
-        <label>
-          Subject
-          <br />
+        <div className="mb-3">
+          <label htmlFor="subject">Subject Line</label>
           <input
+            id="subject"
+            className="form-control"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Your options"
-            style={{ width: "100%", padding: 8, marginBottom: 12 }}
           />
-        </label>
+        </div>
 
-        <label>
-          Recipient first name
-          <br />
-          <input
-            value={recipientFirstName}
-            onChange={(e) => setRecipientFirstName(e.target.value)}
-            placeholder="e.g., Alex"
-            style={{ width: "100%", padding: 8, marginBottom: 12 }}
-          />
-        </label>
+        <div className="row g-3 mb-3">
+          <div className="col-6">
+            <label htmlFor="recipientFirstName">Customer First Name</label>
+            <input
+              id="recipientFirstName"
+              className="form-control"
+              value={recipientFirstName}
+              onChange={(e) => setRecipientFirstName(e.target.value)}
+              placeholder="e.g., Alex"
+            />
+          </div>
+          <div className="col-6">
+            <label htmlFor="repName">Your Name</label>
+            <input
+              id="repName"
+              className="form-control"
+              value={repName}
+              onChange={(e) => setRepName(e.target.value)}
+              placeholder="e.g., Sam Rivera"
+            />
+          </div>
+        </div>
 
-        <label>
-          Your name (rep)
-          <br />
-          <input
-            value={repName}
-            onChange={(e) => setRepName(e.target.value)}
-            placeholder="e.g., Sam Rivera"
-            style={{ width: "100%", padding: 8, marginBottom: 12 }}
-          />
-        </label>
-
-        <div
-          style={{
-            border: "1px solid #ddd",
-            padding: 8,
-            borderRadius: 6,
-            marginBottom: 12,
-          }}
-        >
-          <b>Pick models</b>
-          <div style={{ maxHeight: 240, overflow: "auto", marginTop: 8 }}>
+        <div className="mb-3">
+          <label className="d-block mb-1">Products to Include</label>
+          <div className="model-picker">
             {models.length === 0 ? (
-              <p style={{ color: "#999" }}>
-                No models yet. Add some on the Models page.
+              <p className="text-muted small mb-0 p-1">
+                No products yet — add some on the Products page.
               </p>
             ) : (
               models.map((m) => (
-                <label
-                  key={m.id}
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
-                >
+                <label key={m.id} className="d-flex align-items-center gap-2 mb-0">
                   <input
                     type="checkbox"
+                    className="form-check-input flex-shrink-0"
                     checked={selectedModelIds.includes(m.id)}
                     onChange={() => toggleModel(m.id)}
                   />
@@ -271,30 +272,39 @@ export default function Compose() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={sendEmail} style={{ padding: "10px 14px" }}>
-            Send (Gmail)
+        {status && (
+          <div className={`alert ${status.type === "success" ? "alert-success" : "alert-danger"} py-2 small mb-3`}>
+            {status.msg}
+          </div>
+        )}
+
+        <div className="d-flex gap-2">
+          <button
+            onClick={sendEmail}
+            disabled={sending}
+            className="btn btn-primary"
+          >
+            {sending ? (
+              <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />Sending…</>
+            ) : <><Send size={15} className="me-2" />Send Email</>}
           </button>
-          <button onClick={copyHtml} style={{ padding: "10px 14px" }}>
-            Copy as Rich
+          <button onClick={copyHtml} className="btn btn-outline-secondary">
+            Copy HTML
           </button>
         </div>
       </div>
 
       {/* RIGHT: preview */}
-      <div>
-        <div style={{ marginBottom: 8, color: "#666" }}>
-          <b>Preview</b> (generated from your simple template)
+      <div className="col-md-8">
+        <div className="d-flex align-items-center justify-content-between mb-2">
+          <label className="mb-0 fw-semibold text-muted">Live Preview</label>
+          {selectedModels.length > 0 && (
+            <span className="badge bg-secondary">{selectedModels.length} product{selectedModels.length !== 1 ? "s" : ""}</span>
+          )}
         </div>
         <iframe
-          title="preview"
-          style={{
-            width: "100%",
-            height: "80vh",
-            border: "1px solid #ddd",
-            borderRadius: 6,
-            background: "#fff",
-          }}
+          title="Email preview"
+          className="email-preview-frame"
           srcDoc={html}
         />
       </div>

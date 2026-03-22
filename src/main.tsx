@@ -3,12 +3,14 @@ import ReactDOM from "react-dom/client";
 import {
   createBrowserRouter,
   RouterProvider,
+  NavLink,
   Link,
   Outlet,
 } from "react-router-dom";
+import { Mail } from "lucide-react";
 
-// Add Bootstrap CSS import
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./index.css";
 
 import Home from "./pages/Home";
 import Models from "./pages/Models";
@@ -17,11 +19,22 @@ import Compose from "./pages/Compose";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 
+const navLinks = [
+  { to: "/",         label: "Home",        end: true },
+  { to: "/models",   label: "Products" },
+  { to: "/templates",label: "Templates" },
+  { to: "/compose",  label: "Compose" },
+  { to: "/history",  label: "Sent Emails" },
+  { to: "/settings", label: "Settings" },
+];
+
 function Nav() {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
-      <div className="container-fluid">
+    <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4"
+      style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div className="container-fluid px-4">
         <Link className="navbar-brand" to="/">
+          <Mail size={18} strokeWidth={2.2} />
           Sales Mailer
         </Link>
         <button
@@ -37,36 +50,17 @@ function Nav() {
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav">
-            <li className="nav-item">
-              <Link className="nav-link" to="/">
-                Home
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/models">
-                Models
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/templates">
-                Templates
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/compose">
-                Compose
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/history">
-                History
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/settings">
-                Settings
-              </Link>
-            </li>
+            {navLinks.map(({ to, label, end }) => (
+              <li className="nav-item" key={to}>
+                <NavLink
+                  className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}
+                  to={to}
+                  end={end}
+                >
+                  {label}
+                </NavLink>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
@@ -74,12 +68,13 @@ function Nav() {
   );
 }
 
-// Layout is rendered BY the router, so Nav + children are inside router context
 function Layout() {
   return (
     <>
       <Nav />
-      <Outlet />
+      <div className="container-fluid px-4 pb-5">
+        <Outlet />
+      </div>
     </>
   );
 }
@@ -88,12 +83,12 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { path: "/", element: <Home /> },
-      { path: "/models", element: <Models /> },
+      { path: "/",          element: <Home /> },
+      { path: "/models",    element: <Models /> },
       { path: "/templates", element: <Templates /> },
-      { path: "/compose", element: <Compose /> },
-      { path: "/history", element: <History /> },
-      { path: "/settings", element: <Settings /> },
+      { path: "/compose",   element: <Compose /> },
+      { path: "/history",   element: <History /> },
+      { path: "/settings",  element: <Settings /> },
     ],
   },
 ]);

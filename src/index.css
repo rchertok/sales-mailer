@@ -1,68 +1,194 @@
+/* Sales Mailer – global styles */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --brand-primary: #0d6efd;
+  --brand-light: #EEF4FF;
+  --surface-bg: #f8f9fa;
+  --border-color: #dee2e6;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* ── Reset ── */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  background-color: var(--surface-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #212529;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+/* ── Typography ── */
+h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.25rem; color: #212529; }
+h2 { font-size: 1.35rem; font-weight: 600; margin-bottom: 1rem;   color: #212529; }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+/* ── Form labels ── */
+label {
+  display: block;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+  margin-bottom: 0.25rem;
+  color: #495057;
+  font-size: 0.875rem;
 }
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  color: #212529;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* ── Navbar ── */
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.nav-link {
+  position: relative;
+  transition: color 0.15s ease;
+}
+.nav-link.active {
+  font-weight: 600;
+  color: var(--brand-primary) !important;
+}
+.nav-link.active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 2px;
+  background: var(--brand-primary);
+  border-radius: 2px;
+  animation: slideIn 0.2s ease;
+}
+
+/* ── Keyframes ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-14px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.25; transform: scale(1);   }
+  50%       { opacity: 0.65; transform: scale(1.35); }
+}
+
+@keyframes slideIn {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes alertIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Page entrance ── */
+.page-enter {
+  animation: fadeInUp 0.35s ease both;
+}
+
+/* ── Hero illustration ── */
+.hero-illustration {
+  width: 100%;
+  max-width: 380px;
+  animation: floatY 5s ease-in-out infinite;
+}
+
+/* ── Dot pulse classes for SVG circles ── */
+.dot-a { animation: pulse-dot 3.2s ease-in-out infinite; }
+.dot-b { animation: pulse-dot 3.2s ease-in-out infinite 0.8s; }
+.dot-c { animation: pulse-dot 3.2s ease-in-out infinite 1.6s; }
+.dot-d { animation: pulse-dot 3.2s ease-in-out infinite 2.4s; }
+
+/* ── Step cards ── */
+.step-card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  background: #ffffff;
+  height: 100%;
+  animation: fadeInUp 0.5s ease both;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.step-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(13, 110, 253, 0.10);
+  border-color: #b9d0fd;
+}
+
+.step-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.6rem;
+  background-color: var(--brand-light);
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+}
+
+/* ── Page-header icon alignment ── */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.page-title-icon {
+  color: var(--brand-primary);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+/* ── Alerts ── */
+.alert {
+  animation: alertIn 0.25s ease both;
+}
+
+/* ── Buttons ── */
+.btn {
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn-primary:not(:disabled):hover {
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.30);
+}
+
+/* ── Email preview frame ── */
+.email-preview-frame {
+  width: 100%;
+  height: 76vh;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: #ffffff;
+}
+
+/* ── Product/model picker ── */
+.model-picker {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.model-picker label {
+  padding: 0.3rem 0.25rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.model-picker label:hover {
+  background-color: var(--brand-light);
 }

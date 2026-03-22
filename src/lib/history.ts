@@ -1,12 +1,6 @@
 // src/lib/history.ts
-export type SendRecord = {
-  id: string;
-  at: string;            // ISO timestamp
-  to: string;
-  subject: string;
-  templateTitle: string;
-  modelNames: string[];
-};
+import type { SendRecord } from "../types";
+export type { SendRecord } from "../types";
 
 export const HISTORY_KEY = "send_history";
 

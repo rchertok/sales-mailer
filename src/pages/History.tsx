@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
 import { loadHistory, clearHistory, type SendRecord } from "../lib/history";
 
 export default function History() {
@@ -9,7 +10,7 @@ export default function History() {
   }
 
   function onClear() {
-    if (!confirm("Clear all send history?")) return;
+    if (!confirm("Clear all sent email history? This cannot be undone.")) return;
     clearHistory();
     refresh();
   }
@@ -19,47 +20,54 @@ export default function History() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }}>
-      <h1>Send History</h1>
-
-      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
-        <button onClick={refresh} style={{ padding: "8px 12px" }}>
-          Refresh
-        </button>
-        <button onClick={onClear} style={{ padding: "8px 12px" }}>
-          Clear History
-        </button>
+    <div className="page-enter" style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div className="d-flex align-items-center justify-content-between mb-3">
+        <div className="page-title mb-0">
+          <Clock size={24} className="page-title-icon" />
+          <h1 className="mb-0">Sent Emails</h1>
+        </div>
+        <div className="d-flex gap-2">
+          <button onClick={refresh} className="btn btn-outline-secondary btn-sm">
+            Refresh
+          </button>
+          {items.length > 0 && (
+            <button onClick={onClear} className="btn btn-outline-danger btn-sm">
+              Clear History
+            </button>
+          )}
+        </div>
       </div>
 
       {items.length === 0 ? (
-        <p>No sends yet.</p>
+        <p className="text-muted">No emails sent yet. Head to Compose to send your first one.</p>
       ) : (
-        <table
-          width="100%"
-          cellPadding={8}
-          style={{ borderCollapse: "collapse" }}
-        >
-          <thead>
-            <tr style={{ background: "#f7f7f7" }}>
-              <th align="left">When</th>
-              <th align="left">To</th>
-              <th align="left">Subject</th>
-              <th align="left">Template</th>
-              <th align="left">Models</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((i) => (
-              <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
-                <td>{new Date(i.at).toLocaleString()}</td>
-                <td>{i.to}</td>
-                <td>{i.subject}</td>
-                <td>{i.templateTitle}</td>
-                <td>{i.modelNames.join(", ")}</td>
+        <>
+          <p className="text-muted small mb-2">{items.length} email{items.length !== 1 ? "s" : ""} sent</p>
+          <table className="table table-hover align-middle">
+            <thead className="table-light">
+              <tr>
+                <th>Date Sent</th>
+                <th>Customer</th>
+                <th>Subject</th>
+                <th>Template</th>
+                <th>Products</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((i) => (
+                <tr key={i.id}>
+                  <td className="text-muted small text-nowrap">
+                    {new Date(i.at).toLocaleString()}
+                  </td>
+                  <td>{i.to}</td>
+                  <td>{i.subject}</td>
+                  <td className="text-muted">{i.templateTitle}</td>
+                  <td className="text-muted small">{i.modelNames.join(", ") || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   );

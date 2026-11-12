@@ -18,6 +18,7 @@ export type Model = {
   pricing: Pricing;
   specs?: Spec[];        // customer-facing spec rows shown in emails
   imageUrl?: string;
+  productUrl?: string;   // optional link button per product in emails
   notesInternal?: string;
 };
 

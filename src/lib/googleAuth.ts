@@ -37,9 +37,15 @@ export function getValidAccessToken(): string | null {
 export function requestGoogleAccessToken({
   clientId,
   scopes,
+  prompt = "consent",
+  hint,
 }: {
   clientId: string;
   scopes: string[];
+  /** "consent" shows the full screen, "" skips it when the user already agreed */
+  prompt?: string;
+  /** email of the account to suggest */
+  hint?: string;
 }): Promise<GoogleTokenBundle> {
   return new Promise((resolve, reject) => {
     if (!window.google?.accounts?.oauth2) {
@@ -50,7 +56,9 @@ export function requestGoogleAccessToken({
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: scopes.join(" "),
-      prompt: "consent", // ensures the account chooser the first time
+      prompt,
+      hint,
+      error_callback: (err: any) => reject(new Error(err?.type || "popup_closed")),
       callback: (response: any) => {
         if (response.error) {
           reject(new Error(response.error));

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
 import { loadHistory, clearHistory, type SendRecord } from "../lib/history";
 
 export default function History() {
@@ -20,31 +19,32 @@ export default function History() {
   }, []);
 
   return (
-    <div className="page-enter" style={{ maxWidth: 900, margin: "0 auto" }}>
-      <div className="d-flex align-items-center justify-content-between mb-3">
+    <div className="page page-enter">
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
         <div className="page-title mb-0">
-          <Clock size={24} className="page-title-icon" />
-          <h1 className="mb-0">Sent Emails</h1>
+          <h1>Sent Emails</h1>
         </div>
         <div className="d-flex gap-2">
-          <button onClick={refresh} className="btn btn-outline-secondary btn-sm">
+          <button onClick={refresh} className="btn btn-outline-secondary">
             Refresh
           </button>
           {items.length > 0 && (
-            <button onClick={onClear} className="btn btn-outline-danger btn-sm">
+            <button onClick={onClear} className="btn btn-outline-danger">
               Clear History
             </button>
           )}
         </div>
       </div>
 
+      <div className="panel">
       {items.length === 0 ? (
-        <p className="text-muted">No emails sent yet. Head to Compose to send your first one.</p>
+        <p className="text-muted mb-0">No emails sent yet. Head to Compose to send your first one.</p>
       ) : (
         <>
-          <p className="text-muted small mb-2">{items.length} email{items.length !== 1 ? "s" : ""} sent</p>
+          <h2>{items.length} email{items.length !== 1 ? "s" : ""} sent</h2>
+          <div className="table-responsive">
           <table className="table table-hover align-middle">
-            <thead className="table-light">
+            <thead>
               <tr>
                 <th>Date Sent</th>
                 <th>Customer</th>
@@ -56,19 +56,21 @@ export default function History() {
             <tbody>
               {items.map((i) => (
                 <tr key={i.id}>
-                  <td className="text-muted small text-nowrap">
+                  <td className="text-muted text-nowrap">
                     {new Date(i.at).toLocaleString()}
                   </td>
                   <td>{i.to}</td>
                   <td>{i.subject}</td>
                   <td className="text-muted">{i.templateTitle}</td>
-                  <td className="text-muted small">{i.modelNames.join(", ") || "—"}</td>
+                  <td className="text-muted">{i.modelNames.join(", ")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
+      </div>
     </div>
   );
 }

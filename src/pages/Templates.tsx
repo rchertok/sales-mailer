@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Trash2, LayoutList, Table2 } from "lucide-react";
+import { Trash2, LayoutList, Table2, Plus } from "lucide-react";
+import { Modal } from "react-bootstrap";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { type SimpleTemplate } from "../lib/simpleTemplate";
+import { userStorage } from "../lib/storage";
 
 const STORAGE_KEY = "simple_templates";
 
 function loadTemplates(): SimpleTemplate[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = userStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as SimpleTemplate[]) : [];
   } catch {
     return [];
@@ -14,7 +17,7 @@ function loadTemplates(): SimpleTemplate[] {
 }
 
 function saveTemplates(t: SimpleTemplate[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
+  userStorage.setItem(STORAGE_KEY, JSON.stringify(t));
 }
 
 export default function Templates() {
@@ -23,12 +26,24 @@ export default function Templates() {
   const [greeting, setGreeting] = useState("Hi");
   const [intro, setIntro] = useState("Here are the options we discussed:");
   const [ctaText, setCtaText] = useState("");
-  const [signature, setSignature] = useState("Best,\nYour Sales Rep");
-  const [themeColor, setThemeColor] = useState("#0ea5e9");
+  const [ctaUrl, setCtaUrl] = useState("");
+  const [signature, setSignature] = useState("Best,");
+  const [themeColor, setThemeColor] = useState("#1e4b7a");
   const [logoUrl, setLogoUrl] = useState("");
   const [displayMode, setDisplayMode] = useState<"cards" | "table">("cards");
 
   const mounted = useRef(false);
+
+  // ?new=1 opens the form right away (used by the links on Compose)
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const fromCompose = params.get("from") === "compose";
+  const [showForm, setShowForm] = useState(params.get("new") === "1");
+
+  function closeForm() {
+    setShowForm(false);
+    if (params.has("new")) setParams({}, { replace: true });
+  }
 
   useEffect(() => setTemplates(loadTemplates()), []);
   useEffect(() => {
@@ -44,13 +59,20 @@ export default function Templates() {
       greeting: greeting.trim() || "Hi",
       intro: intro.trim(),
       ctaText: ctaText.trim() || undefined,
+      ctaUrl: ctaUrl.trim() || undefined,
       signature: signature.trim(),
       themeColor: themeColor.trim() || undefined,
       logoUrl: logoUrl.trim() || undefined,
       displayMode,
     };
-    setTemplates((prev) => [t, ...prev]);
+    // Save now, not just in the effect: we may leave this page before it runs.
+    const next = [t, ...templates];
+    saveTemplates(next);
+    setTemplates(next);
     setTitle("");
+    setShowForm(false);
+    if (fromCompose) navigate("/compose", { state: { newTemplateId: t.id } });
+    else if (params.has("new")) setParams({}, { replace: true });
   }
 
   function deleteTemplate(id: string) {
@@ -58,29 +80,31 @@ export default function Templates() {
   }
 
   return (
-    <div className="page-enter" style={{ maxWidth: 900, margin: "0 auto" }}>
+    <div className="page page-enter">
       <div className="page-title">
-        <FileText size={24} className="page-title-icon" />
-        <h1 className="mb-0">Email Templates</h1>
+        <h1>Email Templates</h1>
       </div>
 
-      <form onSubmit={addTemplate} className="mb-4">
-        {/* Row 1: name */}
-        <div className="mb-3">
-          <label htmlFor="templateTitle">Template Name*</label>
-          <input
-            id="templateTitle"
-            className="form-control"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Standard Proposal"
-            required
-          />
-        </div>
+      <Modal show={showForm} onHide={closeForm} size="xl" centered>
+      <form onSubmit={addTemplate}>
+        <Modal.Header closeButton>
+          <Modal.Title as="h1">New Template</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
 
-        {/* Row 2: greeting / brand color */}
-        <div className="row g-3 mb-3">
-          <div className="col-sm-6">
+        <div className="row g-4 mb-4">
+          <div className="col-lg-4">
+            <label htmlFor="templateTitle">Template Name*</label>
+            <input
+              id="templateTitle"
+              className="form-control"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., Standard Proposal"
+              required
+            />
+          </div>
+          <div className="col-lg-4">
             <label htmlFor="greeting">Opening Greeting</label>
             <input
               id="greeting"
@@ -89,85 +113,102 @@ export default function Templates() {
               onChange={(e) => setGreeting(e.target.value)}
               placeholder="Hi"
             />
-            <div className="form-text">e.g. "Hi Alex,"</div>
+            <div className="form-text">Just the greeting word. The customer's name is added for you, so "Hi" becomes "Hi Alex,".</div>
           </div>
-          <div className="col-sm-6">
+          <div className="col-lg-4">
             <label htmlFor="themeColor">Brand Color</label>
-            <div className="d-flex align-items-center gap-2">
-              <input
-                id="themeColor"
-                type="color"
-                className="form-control form-control-color"
-                value={themeColor}
-                onChange={(e) => setThemeColor(e.target.value)}
-                title="Pick a brand color"
-              />
-              <span className="text-muted small">{themeColor}</span>
+            <input
+              id="themeColor"
+              type="color"
+              className="form-control form-control-color"
+              value={themeColor}
+              onChange={(e) => setThemeColor(e.target.value)}
+              title="Pick a brand color"
+            />
+          </div>
+        </div>
+
+        <div className="row g-4 mb-4">
+          <div className="col-lg-6">
+            <label htmlFor="intro">Intro Line</label>
+            <textarea
+              id="intro"
+              className="form-control"
+              value={intro}
+              onChange={(e) => setIntro(e.target.value)}
+              rows={3}
+              placeholder="Here are the options we discussed:"
+            />
+            <div className="form-text">Shows above the products. No need to include the customer's name.</div>
+          </div>
+          <div className="col-lg-6">
+            <label htmlFor="signature">Sign-off</label>
+            <textarea
+              id="signature"
+              className="form-control"
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              rows={3}
+              placeholder="Best,"
+            />
+            <div className="form-text">Goes right above your contact card, which has your name and phone number. You set that up in Settings.</div>
+          </div>
+        </div>
+
+        <div className="row g-4 mb-4">
+          <div className="col-lg-4">
+            <label>How Products Appear</label>
+            <div className="d-flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setDisplayMode("cards")}
+                className={`btn d-flex align-items-center gap-2 ${displayMode === "cards" ? "btn-primary" : "btn-outline-secondary"}`}
+              >
+                <LayoutList size={15} />
+                One by One
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayMode("table")}
+                className={`btn d-flex align-items-center gap-2 ${displayMode === "table" ? "btn-primary" : "btn-outline-secondary"}`}
+              >
+                <Table2 size={15} />
+                Side by Side
+              </button>
+            </div>
+            <div className="form-text">
+              {displayMode === "table"
+                ? "Products are compared side by side in a table."
+                : "Each product gets its own box with its price and details."}
             </div>
           </div>
-        </div>
-
-        {/* Row 3: intro */}
-        <div className="mb-3">
-          <label htmlFor="intro">Intro Line</label>
-          <textarea
-            id="intro"
-            className="form-control"
-            value={intro}
-            onChange={(e) => setIntro(e.target.value)}
-            rows={2}
-            placeholder="Here are the options we discussed:"
-          />
-          <div className="form-text">Appears above the product list in the email.</div>
-        </div>
-
-        {/* Row 4: display mode */}
-        <div className="mb-3">
-          <label className="d-block mb-2">Product Display</label>
-          <div className="d-flex gap-2">
-            <button
-              type="button"
-              onClick={() => setDisplayMode("cards")}
-              className={`btn btn-sm d-flex align-items-center gap-2 ${displayMode === "cards" ? "btn-primary" : "btn-outline-secondary"}`}
-            >
-              <LayoutList size={15} />
-              Individual Cards
-            </button>
-            <button
-              type="button"
-              onClick={() => setDisplayMode("table")}
-              className={`btn btn-sm d-flex align-items-center gap-2 ${displayMode === "table" ? "btn-primary" : "btn-outline-secondary"}`}
-            >
-              <Table2 size={15} />
-              Comparison Table
-            </button>
-          </div>
-          <div className="form-text">
-            {displayMode === "table"
-              ? "Products appear side-by-side in a comparison table."
-              : "Each product appears as its own block with pricing."}
-          </div>
-        </div>
-
-        {/* Row 5: CTA + logo */}
-        <div className="row g-3 mb-3">
-          <div className="col-sm-6">
-            <label htmlFor="ctaText">Button Text (optional)</label>
+          <div className="col-lg-4">
+            <label htmlFor="ctaText">Extra Button (optional)</label>
             <input
               id="ctaText"
               className="form-control"
               value={ctaText}
               onChange={(e) => setCtaText(e.target.value)}
-              placeholder="View details"
+              placeholder="e.g., Book a Call"
             />
             <div className="form-text">
-              {displayMode === "table"
-                ? "Adds a single CTA button below the table."
-                : "Adds a button under each product card."}
+              Most emails don't need one, since customers can just reply. Useful for something like a booking link.
             </div>
+            {ctaText.trim() && (
+              <>
+                <input
+                  className="form-control mt-2"
+                  value={ctaUrl}
+                  onChange={(e) => setCtaUrl(e.target.value)}
+                  placeholder="https://yourcompany.com/learn-more"
+                  aria-label="Button link"
+                />
+                <div className="form-text">The web page the button opens.</div>
+              </>
+            )}
           </div>
-          <div className="col-sm-6">
-            <label htmlFor="logoUrl">Logo URL (optional)</label>
+          <div className="col-lg-4">
+            <label htmlFor="logoUrl">Logo (optional)</label>
             <input
               id="logoUrl"
               className="form-control"
@@ -175,78 +216,84 @@ export default function Templates() {
               onChange={(e) => setLogoUrl(e.target.value)}
               placeholder="https://yourcompany.com/logo.png"
             />
+            <div className="form-text">Paste a link to your logo image.</div>
           </div>
         </div>
 
-        {/* Row 6: signature */}
-        <div className="mb-3">
-          <label htmlFor="signature">Email Signature</label>
-          <textarea
-            id="signature"
-            className="form-control"
-            value={signature}
-            onChange={(e) => setSignature(e.target.value)}
-            rows={3}
-            placeholder={"Best,\nYour Name"}
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary">
-          Save Template
-        </button>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="btn btn-outline-secondary" onClick={closeForm}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary">
+            {fromCompose ? "Save and Go Back to Compose" : "Save Template"}
+          </button>
+        </Modal.Footer>
       </form>
+      </Modal>
 
-      {templates.length === 0 ? (
-        <p className="text-muted">No templates yet. Create one above to use when composing emails.</p>
-      ) : (
-        <table className="table table-hover align-middle">
-          <thead className="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Layout</th>
-              <th>Button Text</th>
-              <th>Brand Color</th>
-              <th>Logo</th>
-              <th className="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((t) => (
-              <tr key={t.id}>
-                <td className="fw-semibold">{t.title}</td>
-                <td>
-                  {t.displayMode === "table"
-                    ? <span className="d-flex align-items-center gap-1 text-muted"><Table2 size={13} /> Table</span>
-                    : <span className="d-flex align-items-center gap-1 text-muted"><LayoutList size={13} /> Cards</span>}
-                </td>
-                <td className="text-muted">{t.ctaText || "—"}</td>
-                <td>
-                  {t.themeColor ? (
-                    <span className="d-flex align-items-center gap-2">
-                      <span style={{
-                        display: "inline-block", width: 16, height: 16,
-                        borderRadius: 3, background: t.themeColor,
-                        border: "1px solid #dee2e6",
-                      }} />
-                      <span className="text-muted small">{t.themeColor}</span>
-                    </span>
-                  ) : "—"}
-                </td>
-                <td className="text-muted">{t.logoUrl ? "Yes" : "—"}</td>
-                <td className="text-end">
-                  <button
-                    onClick={() => deleteTemplate(t.id)}
-                    className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
-                  >
-                    <Trash2 size={14} />
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Your Templates</h2>
+          <button type="button" className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={() => setShowForm(true)}>
+            <Plus size={16} />
+            Create New Template
+          </button>
+        </div>
+        {templates.length === 0 ? (
+          <p className="text-muted mb-0">No templates yet. Create one to use when composing emails.</p>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Products Shown</th>
+                  <th>Button</th>
+                  <th>Brand Color</th>
+                  <th>Logo</th>
+                  <th className="text-end"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((t) => (
+                  <tr key={t.id}>
+                    <td className="fw-semibold">{t.title}</td>
+                    <td>
+                      {t.displayMode === "table"
+                        ? <span className="d-flex align-items-center gap-1 text-muted"><Table2 size={14} /> Side by side</span>
+                        : <span className="d-flex align-items-center gap-1 text-muted"><LayoutList size={14} /> One by one</span>}
+                    </td>
+                    <td className="text-muted">{t.ctaText || "None"}</td>
+                    <td>
+                      {t.themeColor ? (
+                        <span
+                          title="Brand color"
+                          style={{
+                            display: "inline-block", width: 20, height: 20,
+                            borderRadius: 4, background: t.themeColor,
+                            border: "1px solid #dee2e6", verticalAlign: "middle",
+                          }}
+                        />
+                      ) : <span className="text-muted">None</span>}
+                    </td>
+                    <td className="text-muted">{t.logoUrl ? "Yes" : "No"}</td>
+                    <td className="text-end">
+                      <button
+                        onClick={() => deleteTemplate(t.id)}
+                        className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
